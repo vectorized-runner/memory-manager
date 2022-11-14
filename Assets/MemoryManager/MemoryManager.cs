@@ -56,6 +56,8 @@ namespace Memory
 			}
 		}
 
+		private const int AlignmentStoreSize = 2;
+
 #if MemoryManagerSafetyChecks
 		private static readonly HashSet<MemoryBlock> RecentlyFreedBlocks = new();
 		private static readonly Dictionary<Frame, MemoryBlock> AllocatedBlockByFrame = new();
@@ -102,22 +104,9 @@ namespace Memory
 			// All memory is at least 8 bytes aligned, at most uint16.max
 			alignment = Math.Clamp(alignment, 8, UInt16.MaxValue);
 
-			const int alignmentStoreSize = 2;
 			// Allocate extra bytes to store the offset and alignment
-			var maxExtraBytes = alignmentStoreSize + alignment - 1;
-			var mallocSize = size + maxExtraBytes;
-			var alloc = Alloc(mallocSize);
-
-			// Align memory address + 2, so we can use the first 2 bytes for storing the offset
-			var addressToAlign = (byte*)alloc + alignmentStoreSize;
-			var address = (nuint)new IntPtr(addressToAlign).ToInt64();
-			var ptr = (void*)MemoryUtil.AlignUp(address, alignment);
-
-			// Store the offset
-			var offset = (ushort)((byte*)ptr - (byte*)alloc);
-			*((ushort*)ptr - 1) = offset;
-
-
+			var alloc = Alloc(GetRequiredSize(size, alignment));
+			var ptr = HandleOffsetAndAlignmentAfterMalloc(alloc, alignment);
 			var block = new MemoryBlock
 			{
 				Size = size,
@@ -126,6 +115,25 @@ namespace Memory
 			};
 
 			return block;
+		}
+
+		private static int GetRequiredSize(int requestedSize, int alignment)
+		{
+			return requestedSize + AlignmentStoreSize + alignment - 1;
+		}
+
+		private static void* HandleOffsetAndAlignmentAfterMalloc(void* memory, int alignment)
+		{
+			// Align memory address + 2, so we can use the first 2 bytes for storing the offset
+			var addressToAlign = (byte*)memory + AlignmentStoreSize;
+			var address = (nuint)new IntPtr(addressToAlign).ToInt64();
+			var ptr = (void*)MemoryUtil.AlignUp(address, alignment);
+
+			// Store the offset
+			var offset = (ushort)((byte*)ptr - (byte*)memory);
+			*((ushort*)ptr - 1) = offset;
+
+			return ptr;
 		}
 
 		public static void Deallocate(MemoryBlock memoryBlock)
@@ -143,9 +151,7 @@ namespace Memory
 			if (memoryBlock.Ptr == null)
 				return;
 
-			var offset = *((short*)memoryBlock.Ptr - 1);
-			var originalPtr = (void*)((byte*)memoryBlock.Ptr - offset);
-
+			var originalPtr = GetOriginalPtrFromUserPtr(memoryBlock.Ptr);
 			Free(originalPtr);
 			RecentlyFreedBlocks.Add(memoryBlock);
 		}
@@ -153,6 +159,13 @@ namespace Memory
 		public static bool TryExpand(MemoryBlock memoryBlock, int newSize)
 		{
 			throw new NotImplementedException();
+		}
+
+		private static void* GetOriginalPtrFromUserPtr(void* ptr)
+		{
+			var offset = *((short*)ptr - 1);
+			var originalPtr = (void*)((byte*)ptr - offset);
+			return originalPtr;
 		}
 
 		/// <summary>
