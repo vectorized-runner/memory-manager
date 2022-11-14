@@ -16,13 +16,36 @@ namespace Memory
 		Persistent,
 	}
 
+	public unsafe struct MemoryAddress : IEquatable<MemoryAddress>
+	{
+		public long Value;
+
+		public MemoryAddress(void* ptr)
+		{
+			Value = new IntPtr(ptr).ToInt64();
+		}
+
+		public bool Equals(MemoryAddress other)
+		{
+			return Value == other.Value;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return obj is MemoryAddress other && Equals(other);
+		}
+
+		public override int GetHashCode()
+		{
+			return Value.GetHashCode();
+		}
+	}
+
 	public unsafe struct MemoryBlock : IEquatable<MemoryBlock>
 	{
 		public void* Ptr;
 		public int Size;
 		public int Alignment;
-		public Allocation Allocation;
-		public int FrameAllocated;
 
 		public bool Equals(MemoryBlock other)
 		{
@@ -45,8 +68,9 @@ namespace Memory
 		private const int AlignmentStoreSize = 2;
 
 #if MemoryManagerSafetyChecks
-		private static readonly HashSet<MemoryBlock> TempAllocations = new();
-		private static readonly HashSet<MemoryBlock> TempJobAllocations = new();
+		private static readonly Dictionary<MemoryAddress, AllocationRecord> RecordByAddress = new();
+		private static readonly HashSet<AllocationRecord> TempAllocations = new();
+		private static readonly HashSet<AllocationRecord> TempJobAllocations = new();
 		private static int CurrentFrame;
 #endif
 
@@ -79,7 +103,7 @@ namespace Memory
 		{
 			foreach (var tempAlloc in TempAllocations)
 			{
-				if (tempAlloc.FrameAllocated != CurrentFrame)
+				if (tempAlloc.Frame != CurrentFrame)
 				{
 					throw new Exception($"Temp Memory Leak: {tempAlloc}");
 				}
@@ -122,18 +146,18 @@ namespace Memory
 				Size = size,
 				Alignment = alignment,
 				Ptr = ptr,
-				FrameAllocated = CurrentFrame,
-				Allocation = allocation,
 			};
 
 #if MemoryManagerSafetyChecks
+			var record = new AllocationRecord { Allocation = allocation, Frame = CurrentFrame, MemoryAddress = new MemoryAddress(ptr) };
+			
 			switch (allocation)
 			{
 				case Allocation.Temp:
-					TempAllocations.Add(block);
+					TempAllocations.Add(record);
 					break;
 				case Allocation.TempJob:
-					TempJobAllocations.Add(block);
+					TempJobAllocations.Add(record);
 					break;
 				case Allocation.Persistent:
 					break;
@@ -177,13 +201,14 @@ namespace Memory
 			Free(originalPtr);
 
 #if MemoryManagerSafetyChecks
-			switch (memoryBlock.Allocation)
+			var record = RecordByAddress[new MemoryAddress(memoryBlock.Ptr)];
+			switch (record.Allocation)
 			{
 				case Allocation.Temp:
-					TempAllocations.Remove(memoryBlock);
+					TempAllocations.Remove(record);
 					break;
 				case Allocation.TempJob:
-					TempJobAllocations.Remove(memoryBlock);
+					TempJobAllocations.Remove(record);
 					break;
 				case Allocation.Persistent:
 					break;
@@ -199,14 +224,12 @@ namespace Memory
 			var requiredSize = GetRequiredSize(newSize, memoryBlock.Alignment);
 			var reallocPtr = Realloc(originalPtr, requiredSize);
 			var ptr = HandleOffsetAndAlignmentAfterMalloc(reallocPtr, memoryBlock.Alignment);
-
+			
 			return new MemoryBlock
 			{
 				Alignment = memoryBlock.Alignment,
-				Allocation = memoryBlock.Allocation,
 				Ptr = ptr,
 				Size = newSize,
-				FrameAllocated = CurrentFrame,
 			};
 		}
 
