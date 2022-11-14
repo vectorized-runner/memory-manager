@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 public static unsafe class MemoryManager
@@ -24,6 +25,23 @@ public static unsafe class MemoryManager
 			return HashCode.Combine(unchecked((int)(long)Ptr), Size, Alignment);
 		}
 	}
+
+#if MemoryManagerSafetyChecks
+	private static HashSet<MemoryBlock> RecentlyFreedBlocks = new();
+#endif
+
+	public static void ResetCache()
+	{
+#if MemoryManagerSafetyChecks
+		RecentlyFreedBlocks.Clear();
+#endif
+	}
+
+	public static void ProgressFrame()
+	{
+#if MemoryManagerSafetyChecks
+		RecentlyFreedBlocks.Clear();
+#endif
 	}
 
 	public static MemoryBlock Allocate(int size, int alignment)
@@ -54,8 +72,13 @@ public static unsafe class MemoryManager
 #if MemoryManagerSafetyChecks
 		if (memoryBlock.Size < 0)
 			throw new Exception("Attempting to Free Memory Block with Negative size.");
+
+		if (RecentlyFreedBlocks.Contains(memoryBlock))
+		{
+			throw new Exception("Attempting to Double-Free memory block.");
+		}
 #endif
-		
+
 		if (memoryBlock.Ptr == null)
 			return;
 

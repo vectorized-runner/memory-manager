@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 public unsafe class MemoryManagerTests : MonoBehaviour
@@ -20,6 +21,9 @@ public unsafe class MemoryManagerTests : MonoBehaviour
 		{
 			MemoryManager.Deallocate(block);
 		}
+
+		AllocatedBlocks.Clear();
+		MemoryManager.ResetCache();
 	}
 
 #if MemoryManagerSafetyChecks
@@ -40,6 +44,19 @@ public unsafe class MemoryManagerTests : MonoBehaviour
 	{
 		Assert.Throws<Exception>(() => MemoryManager.Deallocate(new MemoryManager.MemoryBlock { Size = -1 }));
 	}
+	
+	[Test]
+	public static void DoubleFreeThrows()
+	{
+		var block = MemoryManager.Allocate(100, 0);
+
+		Assert.Throws<Exception>(() =>
+		{
+			MemoryManager.Deallocate(block);
+			MemoryManager.Deallocate(block);
+		});
+	}
+	
 #endif
 
 	[Test]
