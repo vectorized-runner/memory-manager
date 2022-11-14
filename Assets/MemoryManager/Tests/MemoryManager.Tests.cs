@@ -45,6 +45,15 @@ namespace Memory
 		}
 
 		[Test]
+		public static void TempMemoryThrowsIfNotFreed()
+		{
+			var memory = MemoryManager.Allocate(100, 8, Allocation.Temp);
+			MemoryManager.ProgressFrame(1);
+			AllocatedBlocks.Add(memory);
+			Assert.Throws<Exception>(MemoryManager.CheckForMemoryUsagePolicy);
+		}
+
+		[Test]
 		public static void NegativeAlignmentThrows()
 		{
 			Assert.Throws<Exception>(() => MemoryManager.Allocate(16, -1, Allocation.Temp));
