@@ -8,8 +8,10 @@ namespace Memory
 	{
 		// 1 Frame lifetime
 		Temp,
+
 		// 4 Frames lifetime
 		TempJob,
+
 		// Unlimited lifetime
 		Persistent,
 	}
@@ -37,20 +39,22 @@ namespace Memory
 			return unchecked((int)(long)Ptr);
 		}
 	}
-	
+
 	public static unsafe class MemoryManager
 	{
 		private const int AlignmentStoreSize = 2;
 
 #if MemoryManagerSafetyChecks
-		private static readonly Dictionary<int, Dictionary<Allocation, HashSet<MemoryBlock>>> AllocationsByFrame = new();
+		private static readonly HashSet<MemoryBlock> TempAllocations = new();
+		private static readonly HashSet<MemoryBlock> TempJobAllocations = new();
 		private static int CurrentFrame;
 #endif
 
 		public static void ResetCache()
 		{
 #if MemoryManagerSafetyChecks
-			AllocationsByFrame.Clear();
+			TempAllocations.Clear();
+			TempJobAllocations.Clear();
 			CurrentFrame = default;
 #endif
 		}
@@ -66,15 +70,6 @@ namespace Memory
 		{
 #if MemoryManagerSafetyChecks
 			CurrentFrame = frame;
-
-			// Create new Allocation Storage
-			var dict = new Dictionary<Allocation, HashSet<MemoryBlock>>();
-			dict.Add(Allocation.Temp, new HashSet<MemoryBlock>());
-			dict.Add(Allocation.TempJob, new HashSet<MemoryBlock>());
-			dict.Add(Allocation.Persistent, new HashSet<MemoryBlock>());
-			AllocationsByFrame.Add(frame, dict);
-
-			// TODO: Clear 5 frames old allocation storage
 #endif
 		}
 
@@ -82,29 +77,18 @@ namespace Memory
 		// This method needs to be called every frame.
 		public static void CheckForMemoryUsagePolicy()
 		{
-			var frame = CurrentFrame - 1;
-			if (frame < 0)
-				return;
-			
-			var tempAllocation1 = AllocationsByFrame[frame][Allocation.Temp];
-			if (tempAllocation1.Count > 0)
+			foreach (var tempAlloc in TempAllocations)
 			{
-				throw new Exception("Temp Memory Leak.");
+				if (tempAlloc.FrameAllocated != CurrentFrame)
+				{
+					throw new Exception($"Temp Memory Leak: {tempAlloc}");
+				}
 			}
-			
-			var tempJobAllocation1 = AllocationsByFrame[frame][Allocation.TempJob];
-			
-			if (--frame < 0)
-				return;
-			var tempJobAllocation2 = AllocationsByFrame[frame][Allocation.TempJob];
 
-			if (--frame < 0)
-				return;
-			var tempJobAllocation3 = AllocationsByFrame[frame][Allocation.TempJob];
-			
-			if (--frame < 0)
-				return;
-			var tempJobAllocation4 = AllocationsByFrame[frame][Allocation.TempJob];
+			foreach (var tempJobAlloc in TempJobAllocations)
+			{
+				// TODO: Check for TempJob allocations
+			}
 		}
 #endif
 
@@ -141,8 +125,22 @@ namespace Memory
 				FrameAllocated = CurrentFrame,
 				Allocation = allocation,
 			};
-			
-			AllocationsByFrame[CurrentFrame][allocation].Add(block);
+
+#if MemoryManagerSafetyChecks
+			switch (allocation)
+			{
+				case Allocation.Temp:
+					TempAllocations.Add(block);
+					break;
+				case Allocation.TempJob:
+					TempJobAllocations.Add(block);
+					break;
+				case Allocation.Persistent:
+					break;
+				default:
+					throw new ArgumentOutOfRangeException(nameof(allocation), allocation, null);
+			}
+#endif
 			return block;
 		}
 
@@ -177,7 +175,22 @@ namespace Memory
 
 			var originalPtr = GetOriginalPtrFromUserPtr(memoryBlock.Ptr);
 			Free(originalPtr);
-			AllocationsByFrame[memoryBlock.FrameAllocated][memoryBlock.Allocation].Remove(memoryBlock);
+
+#if MemoryManagerSafetyChecks
+			switch (memoryBlock.Allocation)
+			{
+				case Allocation.Temp:
+					TempAllocations.Remove(memoryBlock);
+					break;
+				case Allocation.TempJob:
+					TempJobAllocations.Remove(memoryBlock);
+					break;
+				case Allocation.Persistent:
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+#endif
 		}
 
 		public static MemoryBlock Reallocate(MemoryBlock memoryBlock, int newSize)
@@ -218,7 +231,7 @@ namespace Memory
 		{
 			return Marshal.ReAllocHGlobal(new IntPtr(ptr), new IntPtr(newSize)).ToPointer();
 		}
-		
+
 		private static void* Alloc(int size)
 		{
 			return Marshal.AllocHGlobal(size).ToPointer();
