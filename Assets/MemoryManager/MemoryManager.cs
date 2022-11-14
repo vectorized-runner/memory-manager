@@ -83,6 +83,7 @@ public static unsafe class MemoryManager
 			return;
 
 		Free(memoryBlock.Ptr);
+		RecentlyFreedBlocks.Add(memoryBlock);
 	}
 
 	public static bool TryExpand(MemoryBlock memoryBlock, int newSize)
