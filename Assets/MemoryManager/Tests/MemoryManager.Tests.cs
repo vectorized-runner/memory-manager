@@ -1,111 +1,115 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
-public unsafe class MemoryManagerTests : MonoBehaviour
+namespace Memory
 {
-	private static List<MemoryManager.MemoryBlock> AllocatedBlocks = new();
-
-	[SetUp]
-	public static void SetUp()
+	public unsafe class MemoryManagerTests : MonoBehaviour
 	{
-		Debug.Assert(AllocatedBlocks.Count == 0);
-	}
+		private static List<MemoryManager.MemoryBlock> AllocatedBlocks = new();
 
-	[TearDown]
-	public static void TearDown()
-	{
-		foreach (var block in AllocatedBlocks)
+		[SetUp]
+		public static void SetUp()
 		{
-			MemoryManager.Deallocate(block);
+			Debug.Assert(AllocatedBlocks.Count == 0);
 		}
 
-		AllocatedBlocks.Clear();
-		MemoryManager.ResetCache();
-	}
+		[TearDown]
+		public static void TearDown()
+		{
+			foreach (var block in AllocatedBlocks)
+			{
+				MemoryManager.Deallocate(block);
+			}
+
+			AllocatedBlocks.Clear();
+			MemoryManager.ResetCache();
+		}
 
 #if MemoryManagerSafetyChecks
-	[Test]
-	public static void NegativeSizeAllocThrows()
-	{
-		Assert.Throws<Exception>(() => MemoryManager.Allocate(-1, 16));
-	}
 
-	[TestCase(3)]
-	[TestCase(5)]
-	[TestCase(100)]
-	public static void NonPowerOf2AlignmentThrows(int alignment)
-	{
-		Assert.Throws<Exception>(() => MemoryManager.Allocate(16, alignment));
-	}
-
-	[Test]
-	public static void NegativeAlignmentThrows()
-	{
-		Assert.Throws<Exception>(() => MemoryManager.Allocate(16, -1));
-	}
-
-	[Test]
-	public static void DeallocateNegativeSizeThrows()
-	{
-		Assert.Throws<Exception>(() => MemoryManager.Deallocate(new MemoryManager.MemoryBlock { Size = -1 }));
-	}
-	
-	[Test]
-	public static void DoubleFreeThrows()
-	{
-		var block = MemoryManager.Allocate(100, 0);
-
-		Assert.Throws<Exception>(() =>
+		[Test]
+		public static void NegativeSizeAllocThrows()
 		{
-			MemoryManager.Deallocate(block);
-			MemoryManager.Deallocate(block);
-		});
-	}
-	
+			Assert.Throws<Exception>(() => MemoryManager.Allocate(-1, 16));
+		}
+
+		[TestCase(3)]
+		[TestCase(5)]
+		[TestCase(100)]
+		public static void NonPowerOf2AlignmentThrows(int alignment)
+		{
+			Assert.Throws<Exception>(() => MemoryManager.Allocate(16, alignment));
+		}
+
+		[Test]
+		public static void NegativeAlignmentThrows()
+		{
+			Assert.Throws<Exception>(() => MemoryManager.Allocate(16, -1));
+		}
+
+		[Test]
+		public static void DeallocateNegativeSizeThrows()
+		{
+			Assert.Throws<Exception>(() => MemoryManager.Deallocate(new MemoryManager.MemoryBlock { Size = -1 }));
+		}
+
+		[Test]
+		public static void DoubleFreeThrows()
+		{
+			var block = MemoryManager.Allocate(100, 0);
+
+			Assert.Throws<Exception>(() =>
+			{
+				MemoryManager.Deallocate(block);
+				MemoryManager.Deallocate(block);
+			});
+		}
+
 #endif
 
-	[Test]
-	public static void ZeroSizeReturnsNullPointer()
-	{
-		var memory = MemoryManager.Allocate(0, 0);
-		Assert.IsTrue(memory.Ptr == null);
-	}
+		[Test]
+		public static void ZeroSizeReturnsNullPointer()
+		{
+			var memory = MemoryManager.Allocate(0, 0);
+			Assert.IsTrue(memory.Ptr == null);
+		}
 
-	[Test]
-	public static void DeallocateZeroSizeDoesNotThrow()
-	{
-	}
 
-	[Test]
-	public static void DeallocateNegativeSizeWithNullPointerDoesNotThrow()
-	{
-	}
+		[Test]
+		public static void DeallocateNegativeSizeWithNullPointerDoesNotThrow()
+		{
+			var memoryBlock = new MemoryManager.MemoryBlock
+			{
+				Size = -5,
+				Ptr = null
+			};
 
-	// TODO: Test allocating more than int.maxvalue
+			Assert.DoesNotThrow(() => MemoryManager.Deallocate(memoryBlock));
+		}
 
-	[Test]
-	public static void PositiveSizeReturnsNonNullPointer()
-	{
-		var memory = MemoryManager.Allocate(100, 0);
-		Assert.IsTrue(memory.Ptr != null);
-		AllocatedBlocks.Add(memory);
-	}
+		[Test]
+		public static void PositiveSizeReturnsNonNullPointer()
+		{
+			var memory = MemoryManager.Allocate(100, 0);
+			Assert.IsTrue(memory.Ptr != null);
+			AllocatedBlocks.Add(memory);
+		}
 
-	[TestCase(1)]
-	[TestCase(4)]
-	[TestCase(16)]
-	[TestCase(100)]
-	[TestCase(400)]
-	[TestCase(16_000)]
-	[TestCase(200_000)]
-	[TestCase(1_000_000)]
-	public static void TestAllocationSizeAtLeastRequested(int requestedSize)
-	{
-		var memory = MemoryManager.Allocate(requestedSize, 0);
-		Assert.GreaterOrEqual(memory.Size, requestedSize);
-		AllocatedBlocks.Add(memory);
+		[TestCase(1)]
+		[TestCase(4)]
+		[TestCase(16)]
+		[TestCase(100)]
+		[TestCase(400)]
+		[TestCase(16_000)]
+		[TestCase(200_000)]
+		[TestCase(1_000_000)]
+		public static void TestAllocationSizeAtLeastRequested(int requestedSize)
+		{
+			var memory = MemoryManager.Allocate(requestedSize, 0);
+			Assert.GreaterOrEqual(memory.Size, requestedSize);
+			AllocatedBlocks.Add(memory);
+		}
 	}
 }
