@@ -7,7 +7,7 @@ namespace Memory
 {
 	public unsafe class MemoryManagerTests : MonoBehaviour
 	{
-		private static List<MemoryManager.MemoryBlock> AllocatedBlocks = new();
+		private static List<MemoryBlock> AllocatedBlocks = new();
 
 		[SetUp]
 		public static void SetUp()
@@ -52,7 +52,7 @@ namespace Memory
 		[Test]
 		public static void DeallocateNegativeSizeThrows()
 		{
-			Assert.Throws<Exception>(() => MemoryManager.Deallocate(new MemoryManager.MemoryBlock { Size = -1 }));
+			Assert.Throws<Exception>(() => MemoryManager.Deallocate(new MemoryBlock { Size = -1 }));
 		}
 
 #endif
@@ -67,7 +67,7 @@ namespace Memory
 		[Test]
 		public static void DeallocateNegativeSizeWithNullPointerThrows()
 		{
-			var memoryBlock = new MemoryManager.MemoryBlock
+			var memoryBlock = new MemoryBlock
 			{
 				Size = -5,
 				Ptr = null

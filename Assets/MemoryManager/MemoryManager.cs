@@ -1,41 +1,43 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using UnityEngine;
 
 namespace Memory
 {
+	public enum Allocation
+	{
+		// 1 Frame lifetime
+		Temp,
+		// 4 Frames lifetime
+		TempJob,
+		// Unlimited lifetime
+		Persistent,
+	}
+
+	public unsafe struct MemoryBlock : IEquatable<MemoryBlock>
+	{
+		public void* Ptr;
+		public int Size;
+		public int Alignment;
+
+		public bool Equals(MemoryBlock other)
+		{
+			return Ptr == other.Ptr;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return obj is MemoryBlock other && Equals(other);
+		}
+
+		public override int GetHashCode()
+		{
+			return unchecked((int)(long)Ptr);
+		}
+	}
+	
 	public static unsafe class MemoryManager
 	{
-		public enum Allocation
-		{
-			Temp,
-			TempJob,
-			Persistent,
-		}
-
-		public struct MemoryBlock : IEquatable<MemoryBlock>
-		{
-			public void* Ptr;
-			public int Size;
-			public int Alignment;
-
-			public bool Equals(MemoryBlock other)
-			{
-				return Ptr == other.Ptr;
-			}
-
-			public override bool Equals(object obj)
-			{
-				return obj is MemoryBlock other && Equals(other);
-			}
-
-			public override int GetHashCode()
-			{
-				return unchecked((int)(long)Ptr);
-			}
-		}
-
 		public struct Frame : IEquatable<Frame>
 		{
 			public long Value;
