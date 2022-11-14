@@ -100,9 +100,16 @@ namespace Memory
 				return new MemoryBlock();
 
 			const int offsetSize = 2;
-			// Allocate extra bytes to ensure you can fit the alignment
-			size = alignment + size + offsetSize;
-			var alloc = Alloc(size);
+			// Allocate extra bytes to store the offset and alignment
+			var maxExtraBytes = offsetSize + alignment - 1;
+			var allocSize = size + maxExtraBytes;
+			var alloc = Alloc(allocSize);
+
+			// Align the pointer
+			var ptr = MemoryUtil.AlignUp((nint)((int*)alloc + offsetSize), alignment);
+			// Store the offset
+			*((UInt16*)ptr - 1) = (UInt16)((uint*)ptr - (uint*)alloc);
+			
 
 			// var ptr = (void*)(alloc + )
 
