@@ -190,14 +190,14 @@ namespace Memory
 			RemoveRecord(memoryBlock.Ptr);
 #endif
 		}
-	
+
 #if MemoryManagerSafetyChecks
-		private static void RemoveRecord(void* ptr)
+		private static Allocation RemoveRecord(void* ptr)
 		{
 			var address = new MemoryAddress(ptr);
 			var record = RecordByAddress[address];
 			RecordByAddress.Remove(address);
-			
+
 			switch (record.Allocation)
 			{
 				case Allocation.Temp:
@@ -211,14 +211,17 @@ namespace Memory
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
+
+			return record.Allocation;
 		}
-		
+
 		private static void AddRecord(void* ptr, Allocation allocation)
 		{
 			var address = new MemoryAddress(ptr);
-			var record = new AllocationRecord { Allocation = allocation, Frame = CurrentFrame, MemoryAddress = address };
+			var record = new AllocationRecord
+				{ Allocation = allocation, Frame = CurrentFrame, MemoryAddress = address };
 			RecordByAddress.Add(address, record);
-			
+
 			switch (allocation)
 			{
 				case Allocation.Temp:
@@ -233,22 +236,28 @@ namespace Memory
 					throw new ArgumentOutOfRangeException(nameof(allocation), allocation, null);
 			}
 		}
-	
+
 #endif
-		
+
 		public static MemoryBlock Reallocate(MemoryBlock memoryBlock, int newSize)
 		{
-			var originalPtr = GetOriginalPtrFromUserPtr(memoryBlock.Ptr);
+			var userPtr = memoryBlock.Ptr;
+			var originalPtr = GetOriginalPtrFromUserPtr(userPtr);
 			var requiredSize = GetRequiredSize(newSize, memoryBlock.Alignment);
 			var reallocPtr = Realloc(originalPtr, requiredSize);
 			var ptr = HandleOffsetAndAlignmentAfterMalloc(reallocPtr, memoryBlock.Alignment);
-			
-			return new MemoryBlock
+			var newBlock = new MemoryBlock
 			{
 				Alignment = memoryBlock.Alignment,
 				Ptr = ptr,
 				Size = newSize,
 			};
+
+#if MemoryManagerSafetyChecks
+			var allocation = RemoveRecord(userPtr);
+			AddRecord(ptr, allocation);
+#endif
+			return newBlock;
 		}
 
 		private static void* GetOriginalPtrFromUserPtr(void* ptr)
