@@ -19,6 +19,8 @@ namespace Memory
 		public void* Ptr;
 		public int Size;
 		public int Alignment;
+		public Allocation Allocation;
+		public int FrameAllocated;
 
 		public bool Equals(MemoryBlock other)
 		{
@@ -38,55 +40,80 @@ namespace Memory
 	
 	public static unsafe class MemoryManager
 	{
-		public struct Frame : IEquatable<Frame>
-		{
-			public long Value;
-
-			public bool Equals(Frame other)
-			{
-				return Value == other.Value;
-			}
-
-			public override bool Equals(object obj)
-			{
-				return obj is Frame other && Equals(other);
-			}
-
-			public override int GetHashCode()
-			{
-				return Value.GetHashCode();
-			}
-		}
-
 		private const int AlignmentStoreSize = 2;
 
 #if MemoryManagerSafetyChecks
-		private static readonly Dictionary<Frame, MemoryBlock> AllocatedBlockByFrame = new();
-		private static Frame CurrentFrame;
+		private static readonly Dictionary<int, Dictionary<Allocation, HashSet<MemoryBlock>>> AllocationsByFrame = new();
+		private static int CurrentFrame;
 #endif
 
 		public static void ResetCache()
 		{
 #if MemoryManagerSafetyChecks
-			AllocatedBlockByFrame.Clear();
+			AllocationsByFrame.Clear();
 			CurrentFrame = default;
 #endif
 		}
 
-		public static void ProgressFrame(Frame frame)
+		public static void Init()
 		{
 #if MemoryManagerSafetyChecks
-			AllocatedBlockByFrame.Clear();
-			CurrentFrame = frame;
+			ProgressFrame(0);
 #endif
 		}
+
+		public static void ProgressFrame(int frame)
+		{
+#if MemoryManagerSafetyChecks
+			CurrentFrame = frame;
+
+			// Create new Allocation Storage
+			var dict = new Dictionary<Allocation, HashSet<MemoryBlock>>();
+			dict.Add(Allocation.Temp, new HashSet<MemoryBlock>());
+			dict.Add(Allocation.TempJob, new HashSet<MemoryBlock>());
+			dict.Add(Allocation.Persistent, new HashSet<MemoryBlock>());
+			AllocationsByFrame.Add(frame, dict);
+
+			// TODO: Clear 5 frames old allocation storage
+#endif
+		}
+
+#if MemoryManagerSafetyChecks
+		// This method needs to be called every frame.
+		public static void CheckForMemoryUsagePolicy()
+		{
+			var frame = CurrentFrame - 1;
+			if (frame < 0)
+				return;
+			
+			var tempAllocation1 = AllocationsByFrame[frame][Allocation.Temp];
+			if (tempAllocation1.Count > 0)
+			{
+				throw new Exception("Temp Memory Leak.");
+			}
+			
+			var tempJobAllocation1 = AllocationsByFrame[frame][Allocation.TempJob];
+			
+			if (--frame < 0)
+				return;
+			var tempJobAllocation2 = AllocationsByFrame[frame][Allocation.TempJob];
+
+			if (--frame < 0)
+				return;
+			var tempJobAllocation3 = AllocationsByFrame[frame][Allocation.TempJob];
+			
+			if (--frame < 0)
+				return;
+			var tempJobAllocation4 = AllocationsByFrame[frame][Allocation.TempJob];
+		}
+#endif
 
 		private static string PtrToString(void* ptr)
 		{
 			return new IntPtr(ptr).ToString();
 		}
 
-		public static MemoryBlock Allocate(int size, int alignment)
+		public static MemoryBlock Allocate(int size, int alignment, Allocation allocation)
 		{
 #if MemoryManagerSafetyChecks
 			if (size < 0)
@@ -110,9 +137,12 @@ namespace Memory
 			{
 				Size = size,
 				Alignment = alignment,
-				Ptr = ptr
+				Ptr = ptr,
+				FrameAllocated = CurrentFrame,
+				Allocation = allocation,
 			};
-
+			
+			AllocationsByFrame[CurrentFrame][allocation].Add(block);
 			return block;
 		}
 
@@ -147,6 +177,7 @@ namespace Memory
 
 			var originalPtr = GetOriginalPtrFromUserPtr(memoryBlock.Ptr);
 			Free(originalPtr);
+			AllocationsByFrame[memoryBlock.FrameAllocated][memoryBlock.Allocation].Remove(memoryBlock);
 		}
 
 		public static MemoryBlock Reallocate(MemoryBlock memoryBlock, int newSize)
@@ -159,8 +190,10 @@ namespace Memory
 			return new MemoryBlock
 			{
 				Alignment = memoryBlock.Alignment,
+				Allocation = memoryBlock.Allocation,
 				Ptr = ptr,
-				Size = newSize
+				Size = newSize,
+				FrameAllocated = CurrentFrame,
 			};
 		}
 

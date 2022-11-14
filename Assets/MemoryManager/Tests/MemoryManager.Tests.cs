@@ -12,6 +12,7 @@ namespace Memory
 		[SetUp]
 		public static void SetUp()
 		{
+			MemoryManager.Init();
 			Debug.Assert(AllocatedBlocks.Count == 0);
 		}
 
@@ -32,7 +33,7 @@ namespace Memory
 		[Test]
 		public static void NegativeSizeAllocThrows()
 		{
-			Assert.Throws<Exception>(() => MemoryManager.Allocate(-1, 16));
+			Assert.Throws<Exception>(() => MemoryManager.Allocate(-1, 16, Allocation.Temp));
 		}
 
 		[TestCase(3)]
@@ -40,13 +41,13 @@ namespace Memory
 		[TestCase(100)]
 		public static void NonPowerOf2AlignmentThrows(int alignment)
 		{
-			Assert.Throws<Exception>(() => MemoryManager.Allocate(16, alignment));
+			Assert.Throws<Exception>(() => MemoryManager.Allocate(16, alignment, Allocation.Temp));
 		}
 
 		[Test]
 		public static void NegativeAlignmentThrows()
 		{
-			Assert.Throws<Exception>(() => MemoryManager.Allocate(16, -1));
+			Assert.Throws<Exception>(() => MemoryManager.Allocate(16, -1, Allocation.Temp));
 		}
 
 		[Test]
@@ -60,7 +61,7 @@ namespace Memory
 		[Test]
 		public static void ZeroSizeReturnsNullPointer()
 		{
-			var memory = MemoryManager.Allocate(0, 0);
+			var memory = MemoryManager.Allocate(0, 0, Allocation.Temp);
 			Assert.IsTrue(memory.Ptr == null);
 		}
 
@@ -79,7 +80,7 @@ namespace Memory
 		[Test]
 		public static void PositiveSizeReturnsNonNullPointer()
 		{
-			var memory = MemoryManager.Allocate(100, 0);
+			var memory = MemoryManager.Allocate(100, 0, Allocation.Temp);
 			Assert.IsTrue(memory.Ptr != null);
 			AllocatedBlocks.Add(memory);
 		}
@@ -91,7 +92,7 @@ namespace Memory
 		public static void ReallocGreaterSizeWorks(int initialSize, int newSize)
 		{
 			var alignment = 16;
-			var alloc = MemoryManager.Allocate(initialSize, alignment);
+			var alloc = MemoryManager.Allocate(initialSize, alignment, Allocation.Temp);
 			var realloc = MemoryManager.Reallocate(alloc, newSize);
 			
 			Assert.AreEqual(newSize, realloc.Size);
@@ -110,7 +111,7 @@ namespace Memory
 		{
 			var align = 16;
 			var size = sizeof(int) * arraySize;
-			var memory = MemoryManager.Allocate(size, align);
+			var memory = MemoryManager.Allocate(size, align, Allocation.Temp);
 			var span = new Span<int>(memory.Ptr, arraySize);
 			
 			for (int i = 0; i < arraySize; i++)
@@ -129,7 +130,7 @@ namespace Memory
 		[TestCase(4096)]
 		public static void TestAlignmentRequested(int alignment)
 		{
-			var memory = MemoryManager.Allocate(100, alignment);
+			var memory = MemoryManager.Allocate(100, alignment, Allocation.Temp);
 			Assert.Zero(new IntPtr(memory.Ptr).ToInt64() % alignment);
 			AllocatedBlocks.Add(memory);
 		}
@@ -144,7 +145,7 @@ namespace Memory
 		[TestCase(1_000_000)]
 		public static void TestAllocationSizeAtLeastRequested(int requestedSize)
 		{
-			var memory = MemoryManager.Allocate(requestedSize, 0);
+			var memory = MemoryManager.Allocate(requestedSize, 0, Allocation.Temp);
 			Assert.GreaterOrEqual(memory.Size, requestedSize);
 			AllocatedBlocks.Add(memory);
 		}
