@@ -64,7 +64,6 @@ namespace Memory
 			Assert.IsTrue(memory.Ptr == null);
 		}
 
-
 		[Test]
 		public static void DeallocateNegativeSizeWithNullPointerThrows()
 		{
@@ -85,6 +84,23 @@ namespace Memory
 			AllocatedBlocks.Add(memory);
 		}
 
+		[TestCase(100, 200)]
+		[TestCase(1, 2)]
+		[TestCase(20, 50)]
+		[TestCase(1, 999)]
+		public static void ReallocGreaterSizeWorks(int initialSize, int newSize)
+		{
+			var alignment = 16;
+			var alloc = MemoryManager.Allocate(initialSize, alignment);
+			var realloc = MemoryManager.Reallocate(alloc, newSize);
+			
+			Assert.AreEqual(newSize, realloc.Size);
+			Assert.AreEqual(alignment, realloc.Alignment);
+			Assert.IsTrue(realloc.Ptr != null);
+			
+			AllocatedBlocks.Add(realloc);
+		}
+
 		[TestCase(1)]
 		[TestCase(4)]
 		[TestCase(100)]
@@ -101,11 +117,10 @@ namespace Memory
 			{
 				span[i] = i;
 			}
+			
+			AllocatedBlocks.Add(memory);
 		}
 		
-		// TODO: Test can use memory
-		// TODO: Test can use all indices
-
 		[TestCase(4)]
 		[TestCase(8)]
 		[TestCase(16)]
@@ -116,6 +131,7 @@ namespace Memory
 		{
 			var memory = MemoryManager.Allocate(100, alignment);
 			Assert.Zero(new IntPtr(memory.Ptr).ToInt64() % alignment);
+			AllocatedBlocks.Add(memory);
 		}
 
 		[TestCase(1)]

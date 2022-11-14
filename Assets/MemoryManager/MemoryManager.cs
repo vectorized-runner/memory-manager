@@ -156,9 +156,19 @@ namespace Memory
 			RecentlyFreedBlocks.Add(memoryBlock);
 		}
 
-		public static bool TryExpand(MemoryBlock memoryBlock, int newSize)
+		public static MemoryBlock Reallocate(MemoryBlock memoryBlock, int newSize)
 		{
-			throw new NotImplementedException();
+			var originalPtr = GetOriginalPtrFromUserPtr(memoryBlock.Ptr);
+			var requiredSize = GetRequiredSize(newSize, memoryBlock.Alignment);
+			var reallocPtr = Realloc(originalPtr, requiredSize);
+			var ptr = HandleOffsetAndAlignmentAfterMalloc(reallocPtr, memoryBlock.Alignment);
+
+			return new MemoryBlock
+			{
+				Alignment = memoryBlock.Alignment,
+				Ptr = ptr,
+				Size = newSize
+			};
 		}
 
 		private static void* GetOriginalPtrFromUserPtr(void* ptr)
@@ -178,6 +188,11 @@ namespace Memory
 			return (x & (x - 1)) == 0;
 		}
 
+		private static void* Realloc(void* ptr, int newSize)
+		{
+			return Marshal.ReAllocHGlobal(new IntPtr(ptr), new IntPtr(newSize)).ToPointer();
+		}
+		
 		private static void* Alloc(int size)
 		{
 			return Marshal.AllocHGlobal(size).ToPointer();
