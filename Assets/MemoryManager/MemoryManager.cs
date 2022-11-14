@@ -12,12 +12,14 @@ public static unsafe class MemoryManager
 
 	public static MemoryBlock Allocate(int size, int alignment)
 	{
+#if MemoryManagerSafetyChecks
 		if (size < 0)
 			throw new Exception($"Negative Size isn't supported: '{size}'");
 		if (alignment < 0)
 			throw new Exception($"Negative Alignment isn't supported: '{alignment}'");
+#endif
 
-		if (size == 0)
+		if (size <= 0)
 			return new MemoryBlock();
 
 		var ptr = Alloc(size);
