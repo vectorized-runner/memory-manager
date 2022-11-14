@@ -12,7 +12,7 @@ public static unsafe class MemoryManager
 
 		public bool Equals(MemoryBlock other)
 		{
-			return Ptr == other.Ptr && Size == other.Size && Alignment == other.Alignment;
+			return Ptr == other.Ptr;
 		}
 
 		public override bool Equals(object obj)
@@ -22,7 +22,7 @@ public static unsafe class MemoryManager
 
 		public override int GetHashCode()
 		{
-			return HashCode.Combine(unchecked((int)(long)Ptr), Size, Alignment);
+			return unchecked((int)(long)Ptr);
 		}
 	}
 
