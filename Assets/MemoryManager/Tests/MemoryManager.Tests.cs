@@ -8,13 +8,13 @@ public unsafe class MemoryManagerTests : MonoBehaviour
 	private static List<MemoryManager.MemoryBlock> AllocatedBlocks = new();
 
 	[SetUp]
-	private static void SetUp()
+	public static void SetUp()
 	{
 		Debug.Assert(AllocatedBlocks.Count == 0);
 	}
 
 	[TearDown]
-	private static void TearDown()
+	public static void TearDown()
 	{
 		foreach (var block in AllocatedBlocks)
 		{
