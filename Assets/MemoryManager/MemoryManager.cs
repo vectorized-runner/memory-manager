@@ -143,7 +143,6 @@ namespace Memory
 			if (memoryBlock.Ptr == null)
 				return;
 
-
 			var offset = *((short*)memoryBlock.Ptr - 1);
 			var originalPtr = (void*)((byte*)memoryBlock.Ptr - offset);
 

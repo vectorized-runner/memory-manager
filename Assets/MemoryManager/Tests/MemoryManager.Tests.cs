@@ -27,17 +27,6 @@ namespace Memory
 			MemoryManager.ResetCache();
 		}
 
-		[TestCase(16, 100, 96)]
-		[TestCase(4, 100, 100)]
-		[TestCase(8, 100, 96)]
-		[TestCase(4096, 50_000, 49_152)]
-		[TestCase(1024, 3000, 2048)]
-		public static void AlignmentPow2(int align, int address, int output)
-		{
-			var result = MemoryUtil.AlignUp(address, align);
-			Assert.AreEqual(output, result);
-		}
-
 #if MemoryManagerSafetyChecks
 
 		[Test]
@@ -94,6 +83,19 @@ namespace Memory
 			var memory = MemoryManager.Allocate(100, 0);
 			Assert.IsTrue(memory.Ptr != null);
 			AllocatedBlocks.Add(memory);
+		}
+
+
+		[TestCase(4)]
+		[TestCase(8)]
+		[TestCase(16)]
+		[TestCase(128)]
+		[TestCase(1024)]
+		[TestCase(4096)]
+		public static void TestAlignmentRequested(int alignment)
+		{
+			var memory = MemoryManager.Allocate(100, alignment);
+			Assert.Zero(new IntPtr(memory.Ptr).ToInt64() % alignment);
 		}
 
 		[TestCase(1)]
