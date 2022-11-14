@@ -138,7 +138,10 @@ namespace Memory
 			if (memoryBlock.Ptr == null)
 				return;
 
-			Free(memoryBlock.Ptr);
+			UInt16 offset = *((UInt16*)memoryBlock.Ptr - 1);
+			var p = (void*)((UInt16*)memoryBlock.Ptr - offset);
+
+			Free(p);
 			RecentlyFreedBlocks.Add(memoryBlock);
 		}
 
