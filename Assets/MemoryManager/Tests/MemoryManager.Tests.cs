@@ -85,6 +85,26 @@ namespace Memory
 			AllocatedBlocks.Add(memory);
 		}
 
+		[TestCase(1)]
+		[TestCase(4)]
+		[TestCase(100)]
+		[TestCase(2000)]
+		[TestCase(10_000)]
+		public static void CanWriteToAllocatedMemory(int arraySize)
+		{
+			var align = 16;
+			var size = sizeof(int) * arraySize;
+			var memory = MemoryManager.Allocate(size, align);
+			var span = new Span<int>(memory.Ptr, arraySize);
+			
+			for (int i = 0; i < arraySize; i++)
+			{
+				span[i] = i;
+			}
+		}
+		
+		// TODO: Test can use memory
+		// TODO: Test can use all indices
 
 		[TestCase(4)]
 		[TestCase(8)]
