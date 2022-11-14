@@ -98,34 +98,25 @@ namespace Memory
 
 			if (size <= 0)
 				return new MemoryBlock();
-			
+
 			// All memory is at least 8 bytes aligned, at most uint16.max
 			alignment = Math.Clamp(alignment, 8, UInt16.MaxValue);
 
-			const int offsetSizeInBytes = 2;
+			const int alignmentStoreSize = 2;
 			// Allocate extra bytes to store the offset and alignment
-			var maxExtraBytes = offsetSizeInBytes + alignment - 1;
-			var allocSize = size + maxExtraBytes;
-			var alloc = Alloc(allocSize);
-			
-			Debug.Log($"Alloc: {PtrToString(alloc)}");
-			
+			var maxExtraBytes = alignmentStoreSize + alignment - 1;
+			var mallocSize = size + maxExtraBytes;
+			var alloc = Alloc(mallocSize);
+
 			// Align memory address + 2, so we can use the first 2 bytes for storing the offset
-			var addressToAlign = (byte*)alloc + offsetSizeInBytes;
+			var addressToAlign = (byte*)alloc + alignmentStoreSize;
 			var address = (nuint)new IntPtr(addressToAlign).ToInt64();
 			var ptr = (void*)MemoryUtil.AlignUp(address, alignment);
 
-			Debug.Log($"Address: {address}");
-			Debug.Log($"AddressToAlign: {PtrToString(addressToAlign)}");
-			Debug.Log($"Ptr: {PtrToString(ptr)}");
-			
 			// Store the offset
-			var offset = (ushort)((byte*)ptr - (byte*)alloc);;
+			var offset = (ushort)((byte*)ptr - (byte*)alloc);
 			*((ushort*)ptr - 1) = offset;
-			
-			Debug.Log($"Offset: {offset}");
 
-			// var ptr = (void*)(alloc + )
 
 			var block = new MemoryBlock
 			{
@@ -139,8 +130,6 @@ namespace Memory
 
 		public static void Deallocate(MemoryBlock memoryBlock)
 		{
-			return;
-			
 #if MemoryManagerSafetyChecks
 			if (memoryBlock.Size < 0)
 				throw new Exception("Attempting to Free Memory Block with Negative size.");
@@ -154,10 +143,11 @@ namespace Memory
 			if (memoryBlock.Ptr == null)
 				return;
 
-			UInt16 offset = *((UInt16*)memoryBlock.Ptr - 1);
-			var p = (void*)((UInt16*)memoryBlock.Ptr - offset);
 
-			Free(p);
+			var offset = *((short*)memoryBlock.Ptr - 1);
+			var originalPtr = (void*)((byte*)memoryBlock.Ptr - offset);
+
+			Free(originalPtr);
 			RecentlyFreedBlocks.Add(memoryBlock);
 		}
 
