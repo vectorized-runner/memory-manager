@@ -12,7 +12,23 @@ public static unsafe class MemoryManager
 
 	public static MemoryBlock Allocate(int size, int alignment)
 	{
-		throw new NotImplementedException();
+		if (size < 0)
+			throw new Exception($"Negative Size isn't supported: '{size}'");
+		if (alignment < 0)
+			throw new Exception($"Negative Alignment isn't supported: '{alignment}'");
+
+		if (size == 0)
+			return new MemoryBlock();
+
+		var ptr = Alloc(size);
+		var block = new MemoryBlock
+		{
+			Size = size,
+			Alignment = alignment,
+			Ptr = ptr
+		};
+
+		return block;
 	}
 
 	public static void Deallocate(MemoryBlock memoryBlock)
