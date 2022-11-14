@@ -27,6 +27,17 @@ namespace Memory
 			MemoryManager.ResetCache();
 		}
 
+		[TestCase(16, 100, 96)]
+		[TestCase(4, 100, 100)]
+		[TestCase(8, 100, 96)]
+		[TestCase(4096, 50_000, 49_152)]
+		[TestCase(1024, 3000, 2048)]
+		public static void AlignmentPow2(int align, int address, int output)
+		{
+			var result = MemoryUtil.AlignUp(address, align);
+			Assert.AreEqual(output, result);
+		}
+
 #if MemoryManagerSafetyChecks
 
 		[Test]
