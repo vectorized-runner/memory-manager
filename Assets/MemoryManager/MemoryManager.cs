@@ -26,6 +26,26 @@ public static unsafe class MemoryManager
 		}
 	}
 
+	public struct Frame : IEquatable<Frame>
+	{
+		public long Value;
+
+		public bool Equals(Frame other)
+		{
+			return Value == other.Value;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return obj is Frame other && Equals(other);
+		}
+
+		public override int GetHashCode()
+		{
+			return Value.GetHashCode();
+		}
+	}
+
 #if MemoryManagerSafetyChecks
 	private static readonly HashSet<MemoryBlock> RecentlyFreedBlocks = new();
 #endif
