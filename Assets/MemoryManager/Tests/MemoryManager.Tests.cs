@@ -22,6 +22,7 @@ public unsafe class MemoryManagerTests : MonoBehaviour
 		}
 	}
 
+#if MemoryManagerSafetyChecks
 	[Test]
 	public static void NegativeSizeAllocThrows()
 	{
@@ -35,6 +36,13 @@ public unsafe class MemoryManagerTests : MonoBehaviour
 	}
 
 	[Test]
+	public static void DeallocateNegativeSizeThrows()
+	{
+		Assert.Throws<Exception>(() => MemoryManager.Deallocate(new MemoryManager.MemoryBlock { Size = -1 }));
+	}
+#endif
+
+	[Test]
 	public static void ZeroSizeReturnsNullPointer()
 	{
 		var memory = MemoryManager.Allocate(0, 0);
@@ -44,15 +52,13 @@ public unsafe class MemoryManagerTests : MonoBehaviour
 	[Test]
 	public static void DeallocateZeroSizeDoesNotThrow()
 	{
-		
 	}
 
 	[Test]
 	public static void DeallocateNegativeSizeWithNullPointerDoesNotThrow()
 	{
-		
 	}
-	
+
 	// TODO: Test allocating more than int.maxvalue
 
 	[Test]
