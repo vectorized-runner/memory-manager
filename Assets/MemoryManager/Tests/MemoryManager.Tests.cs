@@ -77,7 +77,7 @@ namespace Memory
 
 
 		[Test]
-		public static void DeallocateNegativeSizeWithNullPointerDoesNotThrow()
+		public static void DeallocateNegativeSizeWithNullPointerThrows()
 		{
 			var memoryBlock = new MemoryManager.MemoryBlock
 			{
@@ -85,7 +85,7 @@ namespace Memory
 				Ptr = null
 			};
 
-			Assert.DoesNotThrow(() => MemoryManager.Deallocate(memoryBlock));
+			Assert.Throws<Exception>(() => MemoryManager.Deallocate(memoryBlock));
 		}
 
 		[Test]
