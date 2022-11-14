@@ -98,6 +98,9 @@ namespace Memory
 
 			if (size <= 0)
 				return new MemoryBlock();
+			
+			// All memory is at least 8 bytes aligned, at most uint16.max
+			alignment = Math.Clamp(alignment, 8, UInt16.MaxValue);
 
 			const int offsetSizeInBytes = 2;
 			// Allocate extra bytes to store the offset and alignment
