@@ -1,10 +1,5 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Unity.Collections.LowLevel.Unsafe;
-using UnityEngine;
-
 
 public static unsafe class MemoryManager
 {
@@ -20,7 +15,7 @@ public static unsafe class MemoryManager
 		throw new NotImplementedException();
 	}
 
-	public static void Deallocate(MemoryBlock memoryBlock, int alignment)
+	public static void Deallocate(MemoryBlock memoryBlock)
 	{
 		throw new NotImplementedException();
 	}
@@ -28,5 +23,15 @@ public static unsafe class MemoryManager
 	public static bool TryExpand(MemoryBlock memoryBlock, int newSize)
 	{
 		throw new NotImplementedException();
+	}
+
+	private static void* Alloc(int size)
+	{
+		return Marshal.AllocHGlobal(size).ToPointer();
+	}
+
+	private static void Free(void* ptr)
+	{
+		Marshal.FreeHGlobal(new IntPtr(ptr));
 	}
 }
