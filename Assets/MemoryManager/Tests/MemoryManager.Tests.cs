@@ -66,18 +66,6 @@ namespace Memory
 			Assert.Throws<Exception>(() => MemoryManager.Deallocate(new MemoryManager.MemoryBlock { Size = -1 }));
 		}
 
-		[Test]
-		public static void DoubleFreeThrows()
-		{
-			var block = MemoryManager.Allocate(100, 0);
-
-			Assert.Throws<Exception>(() =>
-			{
-				MemoryManager.Deallocate(block);
-				MemoryManager.Deallocate(block);
-			});
-		}
-
 #endif
 
 		[Test]
