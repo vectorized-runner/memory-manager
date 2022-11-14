@@ -3,11 +3,27 @@ using System.Runtime.InteropServices;
 
 public static unsafe class MemoryManager
 {
-	public struct MemoryBlock
+	public struct MemoryBlock : IEquatable<MemoryBlock>
 	{
 		public void* Ptr;
 		public int Size;
 		public int Alignment;
+
+		public bool Equals(MemoryBlock other)
+		{
+			return Ptr == other.Ptr && Size == other.Size && Alignment == other.Alignment;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return obj is MemoryBlock other && Equals(other);
+		}
+
+		public override int GetHashCode()
+		{
+			return HashCode.Combine(unchecked((int)(long)Ptr), Size, Alignment);
+		}
+	}
 	}
 
 	public static MemoryBlock Allocate(int size, int alignment)
