@@ -59,7 +59,6 @@ namespace Memory
 		private const int AlignmentStoreSize = 2;
 
 #if MemoryManagerSafetyChecks
-		private static readonly HashSet<MemoryBlock> RecentlyFreedBlocks = new();
 		private static readonly Dictionary<Frame, MemoryBlock> AllocatedBlockByFrame = new();
 		private static Frame CurrentFrame;
 #endif
@@ -67,7 +66,6 @@ namespace Memory
 		public static void ResetCache()
 		{
 #if MemoryManagerSafetyChecks
-			RecentlyFreedBlocks.Clear();
 			AllocatedBlockByFrame.Clear();
 			CurrentFrame = default;
 #endif
@@ -76,7 +74,6 @@ namespace Memory
 		public static void ProgressFrame(Frame frame)
 		{
 #if MemoryManagerSafetyChecks
-			RecentlyFreedBlocks.Clear();
 			AllocatedBlockByFrame.Clear();
 			CurrentFrame = frame;
 #endif
@@ -141,11 +138,6 @@ namespace Memory
 #if MemoryManagerSafetyChecks
 			if (memoryBlock.Size < 0)
 				throw new Exception("Attempting to Free Memory Block with Negative size.");
-
-			if (RecentlyFreedBlocks.Contains(memoryBlock))
-			{
-				throw new Exception("Attempting to Double-Free memory block.");
-			}
 #endif
 
 			if (memoryBlock.Ptr == null)
@@ -153,7 +145,6 @@ namespace Memory
 
 			var originalPtr = GetOriginalPtrFromUserPtr(memoryBlock.Ptr);
 			Free(originalPtr);
-			RecentlyFreedBlocks.Add(memoryBlock);
 		}
 
 		public static MemoryBlock Reallocate(MemoryBlock memoryBlock, int newSize)
