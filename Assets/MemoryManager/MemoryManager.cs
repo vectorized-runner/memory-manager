@@ -149,7 +149,9 @@ namespace Memory
 			};
 
 #if MemoryManagerSafetyChecks
-			var record = new AllocationRecord { Allocation = allocation, Frame = CurrentFrame, MemoryAddress = new MemoryAddress(ptr) };
+			var address = new MemoryAddress(ptr);
+			var record = new AllocationRecord { Allocation = allocation, Frame = CurrentFrame, MemoryAddress = address };
+			RecordByAddress.Add(address, record);
 			
 			switch (allocation)
 			{
@@ -201,7 +203,10 @@ namespace Memory
 			Free(originalPtr);
 
 #if MemoryManagerSafetyChecks
-			var record = RecordByAddress[new MemoryAddress(memoryBlock.Ptr)];
+			var address = new MemoryAddress(memoryBlock.Ptr);
+			var record = RecordByAddress[address];
+			RecordByAddress.Remove(address);
+			
 			switch (record.Allocation)
 			{
 				case Allocation.Temp:
