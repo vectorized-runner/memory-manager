@@ -149,23 +149,7 @@ namespace Memory
 			};
 
 #if MemoryManagerSafetyChecks
-			var address = new MemoryAddress(ptr);
-			var record = new AllocationRecord { Allocation = allocation, Frame = CurrentFrame, MemoryAddress = address };
-			RecordByAddress.Add(address, record);
-			
-			switch (allocation)
-			{
-				case Allocation.Temp:
-					TempAllocations.Add(record);
-					break;
-				case Allocation.TempJob:
-					TempJobAllocations.Add(record);
-					break;
-				case Allocation.Persistent:
-					break;
-				default:
-					throw new ArgumentOutOfRangeException(nameof(allocation), allocation, null);
-			}
+			AddRecord(ptr, allocation);
 #endif
 			return block;
 		}
@@ -203,7 +187,14 @@ namespace Memory
 			Free(originalPtr);
 
 #if MemoryManagerSafetyChecks
-			var address = new MemoryAddress(memoryBlock.Ptr);
+			RemoveRecord(memoryBlock.Ptr);
+#endif
+		}
+	
+#if MemoryManagerSafetyChecks
+		private static void RemoveRecord(void* ptr)
+		{
+			var address = new MemoryAddress(ptr);
 			var record = RecordByAddress[address];
 			RecordByAddress.Remove(address);
 			
@@ -220,9 +211,31 @@ namespace Memory
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
-#endif
 		}
-
+		
+		private static void AddRecord(void* ptr, Allocation allocation)
+		{
+			var address = new MemoryAddress(ptr);
+			var record = new AllocationRecord { Allocation = allocation, Frame = CurrentFrame, MemoryAddress = address };
+			RecordByAddress.Add(address, record);
+			
+			switch (allocation)
+			{
+				case Allocation.Temp:
+					TempAllocations.Add(record);
+					break;
+				case Allocation.TempJob:
+					TempJobAllocations.Add(record);
+					break;
+				case Allocation.Persistent:
+					break;
+				default:
+					throw new ArgumentOutOfRangeException(nameof(allocation), allocation, null);
+			}
+		}
+	
+#endif
+		
 		public static MemoryBlock Reallocate(MemoryBlock memoryBlock, int newSize)
 		{
 			var originalPtr = GetOriginalPtrFromUserPtr(memoryBlock.Ptr);
