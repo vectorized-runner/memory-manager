@@ -27,7 +27,7 @@ public static unsafe class MemoryManager
 	}
 
 #if MemoryManagerSafetyChecks
-	private static HashSet<MemoryBlock> RecentlyFreedBlocks = new();
+	private static readonly HashSet<MemoryBlock> RecentlyFreedBlocks = new();
 #endif
 
 	public static void ResetCache()
@@ -51,6 +51,8 @@ public static unsafe class MemoryManager
 			throw new Exception($"Negative Size isn't supported: '{size}'");
 		if (alignment < 0)
 			throw new Exception($"Negative Alignment isn't supported: '{alignment}'");
+		if (!IsPow2(alignment))
+			throw new Exception("Alignment must be a power of 2.");
 #endif
 
 		if (size <= 0)
@@ -89,6 +91,16 @@ public static unsafe class MemoryManager
 	public static bool TryExpand(MemoryBlock memoryBlock, int newSize)
 	{
 		throw new NotImplementedException();
+	}
+
+	/// <summary>
+	/// https://stackoverflow.com/questions/600293/how-to-check-if-a-number-is-a-power-of-2
+	/// </summary>
+	/// <param name="x"></param>
+	/// <returns></returns>
+	public static bool IsPow2(int x)
+	{
+		return (x & (x - 1)) == 0;
 	}
 
 	private static void* Alloc(int size)

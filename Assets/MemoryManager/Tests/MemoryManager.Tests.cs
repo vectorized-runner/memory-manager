@@ -33,6 +33,14 @@ public unsafe class MemoryManagerTests : MonoBehaviour
 		Assert.Throws<Exception>(() => MemoryManager.Allocate(-1, 16));
 	}
 
+	[TestCase(3)]
+	[TestCase(5)]
+	[TestCase(100)]
+	public static void NonPowerOf2AlignmentThrows(int alignment)
+	{
+		Assert.Throws<Exception>(() => MemoryManager.Allocate(16, alignment));
+	}
+
 	[Test]
 	public static void NegativeAlignmentThrows()
 	{
