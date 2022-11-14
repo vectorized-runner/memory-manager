@@ -2,9 +2,9 @@ namespace Memory
 {
 	public class MemoryUtil
 	{
-		public static nint AlignUp(nint address, int alignment)
+		public static nuint AlignUp(nuint address, int alignment)
 		{
-			return address & ~(alignment - 1);
+			return (address + (nuint)alignment - 1) & ~((nuint)alignment - 1);
 		}
 	}
 }

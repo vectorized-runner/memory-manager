@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using UnityEngine;
 
 namespace Memory
 {
@@ -79,10 +80,9 @@ namespace Memory
 #endif
 		}
 
-		public static int AlignUp(int value, int alignment)
+		private static string PtrToString(void* ptr)
 		{
-			// TODO: Implement
-			throw new NotImplementedException();
+			return new IntPtr(ptr).ToString();
 		}
 
 		public static MemoryBlock Allocate(int size, int alignment)
@@ -99,17 +99,28 @@ namespace Memory
 			if (size <= 0)
 				return new MemoryBlock();
 
-			const int offsetSize = 2;
+			const int offsetSizeInBytes = 2;
 			// Allocate extra bytes to store the offset and alignment
-			var maxExtraBytes = offsetSize + alignment - 1;
+			var maxExtraBytes = offsetSizeInBytes + alignment - 1;
 			var allocSize = size + maxExtraBytes;
 			var alloc = Alloc(allocSize);
-
-			// Align the pointer
-			var ptr = MemoryUtil.AlignUp((nint)((int*)alloc + offsetSize), alignment);
-			// Store the offset
-			*((UInt16*)ptr - 1) = (UInt16)((uint*)ptr - (uint*)alloc);
 			
+			Debug.Log($"Alloc: {PtrToString(alloc)}");
+			
+			// Align memory address + 2, so we can use the first 2 bytes for storing the offset
+			var addressToAlign = (byte*)alloc + offsetSizeInBytes;
+			var address = (nuint)new IntPtr(addressToAlign).ToInt64();
+			var ptr = (void*)MemoryUtil.AlignUp(address, alignment);
+
+			Debug.Log($"Address: {address}");
+			Debug.Log($"AddressToAlign: {PtrToString(addressToAlign)}");
+			Debug.Log($"Ptr: {PtrToString(ptr)}");
+			
+			// Store the offset
+			var offset = (ushort)((byte*)ptr - (byte*)alloc);;
+			*((ushort*)ptr - 1) = offset;
+			
+			Debug.Log($"Offset: {offset}");
 
 			// var ptr = (void*)(alloc + )
 
@@ -117,7 +128,7 @@ namespace Memory
 			{
 				Size = size,
 				Alignment = alignment,
-				Ptr = alloc
+				Ptr = ptr
 			};
 
 			return block;
@@ -125,6 +136,8 @@ namespace Memory
 
 		public static void Deallocate(MemoryBlock memoryBlock)
 		{
+			return;
+			
 #if MemoryManagerSafetyChecks
 			if (memoryBlock.Size < 0)
 				throw new Exception("Attempting to Free Memory Block with Negative size.");
