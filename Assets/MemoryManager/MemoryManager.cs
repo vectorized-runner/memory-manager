@@ -35,7 +35,15 @@ public static unsafe class MemoryManager
 
 	public static void Deallocate(MemoryBlock memoryBlock)
 	{
-		throw new NotImplementedException();
+#if MemoryManagerSafetyChecks
+		if (memoryBlock.Size < 0)
+			throw new Exception("Attempting to Free Memory Block with Negative size.");
+#endif
+		
+		if (memoryBlock.Ptr == null)
+			return;
+
+		Free(memoryBlock.Ptr);
 	}
 
 	public static bool TryExpand(MemoryBlock memoryBlock, int newSize)
